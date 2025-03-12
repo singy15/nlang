@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 
 namespace nlang.net
@@ -18,6 +19,7 @@ namespace nlang.net
 
     public class Token
     {
+
         public TokenClass Cls { get; set; }
 
         public string Text { get; set; }
@@ -29,7 +31,8 @@ namespace nlang.net
         }
     }
 
-    public class TokenizerState {
+    public class TokenizerState
+    {
         public string Source { get; set; }
 
         public string CurChar1 { get; set; }
@@ -47,22 +50,60 @@ namespace nlang.net
 
     public class Tokenizer
     {
-        public static readonly int TokeninzeErrorCount = 10000;  
+        public static readonly int TokeninzeErrorCount = 10000;
+
+        public static readonly Regex RegexNumberStartPattern = new Regex("[0-9]");
+
+        public static readonly Regex RegexNumberPattern = new Regex("[0-9\\.]");
+
+
 
         public TokenizerState State { get; set; }
 
         public List<Token> Tokenize(string source)
         {
             State = new TokenizerState();
+
+            while (Read())
+            {
+                if (IsDelimiter())
+                {
+                    Skip();
+
+                }
+                else if (State.CurChar1 == "(")
+                {
+                    PushBuffer();
+                    Accept(TokenClass.LP);
+                }
+                else if (State.CurChar1 == ")")
+                {
+                    PushBuffer();
+                    Accept(TokenClass.RP);
+                }
+                else if (State.CurChar1 == "\"")
+                {
+                    ReadString();
+                }
+                else if (RegexNumberStartPattern.IsMatch(State.CurChar1)
+                    || (State.CurChar1 == "-" && RegexNumberStartPattern.IsMatch(State.CurChar2)))
+                {
+                    ReadNumber();
+                }
+
+            }
+
+
             return new List<Token>();
         }
 
-        private bool IsDelimiter(string c)
+        private bool IsDelimiter()
         {
-            return c == " " || c == Environment.NewLine;
+            return State.CurChar1 == " " || State.CurChar1 == Environment.NewLine;
         }
 
-        private bool Read() {
+        private bool Read()
+        {
             State.Count++;
             if (State.Count > TokeninzeErrorCount) return false;
             State.Index += 1;
@@ -74,7 +115,8 @@ namespace nlang.net
 
         private void Skip() { }
 
-        private void PushBuffer() {
+        private void PushBuffer()
+        {
             State.Buffer += State.CurChar1;
         }
 
@@ -94,6 +136,14 @@ namespace nlang.net
             State.Buffer = "";
         }
 
+        private void ReadString()
+        {
+            throw new NotImplementedException();
+        }
 
+        private void ReadNumber()
+        {
+            throw new NotImplementedException();
+        }
     }
 }
