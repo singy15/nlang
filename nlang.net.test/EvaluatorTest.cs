@@ -74,5 +74,25 @@ namespace nlang.net.test
                 EvaluateScript("(progn (= x 1) x)");
             });
         }
+
+        [Test]
+        public void Test__Evaluate__SpecialForms__fn()
+        {
+            Assert.That(EvaluateScript("(progn (let f (fn (x) (+ x 1))) (f 1))"), Is.EqualTo(Convert.ToDecimal(2)));
+            
+            var src1 = @"
+(progn
+    (let f null)
+    (progn
+        (let y 2)
+        (= f (fn (x) (* x y)))
+        (print (f 2)))
+    (let y 10)
+    (= y 8)
+    (print (f 3)))
+";
+            EvaluateScript(src1);
+        }
+
     }
 }

@@ -33,6 +33,7 @@ namespace nlang.net
                 ["true"] = true,
                 ["false"] = false,
                 ["undefined"] = Statics.Undefined,
+                ["null"] = null,
 
                 // Built-in functions
                 ["print"] = new Func<EvalEnv, List<object>, object>((env, args) =>
@@ -202,6 +203,33 @@ namespace nlang.net
                 Assign(((Token)cdr[0]).Text, Evaluate(cdr[1]));
                 return Statics.Undefined;
             }
+            else if (car.Cls == TokenClass.SYM && car.Text == "fn")
+            {
+                /* SPECIAL FORM: fn */
+
+                var prms = (Node)(cdr[0]);
+                var body = (Node)(cdr[1]);
+                var lexicalContext = Env.Contexts.Select(c => c).ToList();
+                var fn = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    var dynamicContext = Env.Contexts;
+                    Env.Contexts = lexicalContext;
+                    PushContext();
+                    int i = 0;
+                    prms.Children.ForEach((x) =>
+                    {
+                        var symbolName = ((Token)x).Text;
+                        Intern(symbolName);
+                        Assign(symbolName, args[i]);
+                        i++;
+                    });
+                    var ret = Evaluate(body);
+                    PopContext();
+                    Env.Contexts = dynamicContext;
+                    return ret;
+                });
+                return fn;
+            }
             else
             {
                 /* NORMAL FORM */
@@ -221,7 +249,8 @@ namespace nlang.net
             for (var i = 0; i < Env.Contexts.Count; i++)
             {
                 var c = Env.Contexts[i];
-                if (c.Contents.ContainsKey(symbolName)) {
+                if (c.Contents.ContainsKey(symbolName))
+                {
                     c.Set(symbolName, val);
                     return val;
                 }
