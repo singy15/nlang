@@ -61,9 +61,9 @@ namespace nlang.net
 
         public static readonly Regex RegexNumberPattern = new Regex("[0-9\\.]");
 
-        public static readonly Regex RegexSymbolStartPattern = new Regex("[a-zA-Z\\+\\-\\/\\*=:><\\?!%]");
+        public static readonly Regex RegexSymbolStartPattern = new Regex("[a-zA-Z\\+\\-\\/\\*=:><\\?!%&]");
 
-        public static readonly Regex RegexSymbolPattern = new Regex("[a-zA-Z\\+\\-\\/\\*=:><\\?!0-9%]");
+        public static readonly Regex RegexSymbolPattern = new Regex("[a-zA-Z\\+\\-\\/\\*=:><\\?!0-9%&]");
 
 
         public TokenizerState State { get; set; }

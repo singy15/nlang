@@ -7,6 +7,14 @@ using System.Threading.Tasks;
 namespace nlang.net
 {
 
+    public class Undefined : Object
+    {
+        public override string ToString()
+        {
+            return "undefined";
+        }
+    }
+
     public class Statics
     {
         public static readonly object Undefined = new object();
@@ -40,6 +48,37 @@ namespace nlang.net
                 {
                     Console.WriteLine(args[0]);
                     return Statics.Undefined;
+                }),
+                ["list"] = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    var list = new List<object>();
+                    args.ForEach(arg =>
+                    {
+                        list.Add(arg);
+                    });
+                    return list;
+                }),                
+                ["substr"] = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    return Convert.ToString(args[0]).Substring(Convert.ToInt32(args[1]), Convert.ToInt32(args[2]));
+                }),
+                ["strlen"] = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    return Convert.ToString(args[0]).Length;
+                }),
+
+                // Cast Operators
+                ["num"] = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    return Convert.ToDecimal(args[0]);
+                }),
+                ["str"] = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    return Convert.ToString(args[0]);
+                }),
+                ["bool"] = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    return Convert.ToBoolean(args[0]);
                 }),
 
                 // Arithmetic Operators
@@ -105,6 +144,11 @@ namespace nlang.net
                     return Convert.ToDecimal(args[0]) <= Convert.ToDecimal(args[1]);
                 }),
 
+                // String Operators
+                ["&"] = new Func<EvalEnv, List<object>, object>((env, args) =>
+                {
+                    return args.Skip(1).Aggregate(Convert.ToString(args[0]), (m, x) => m + Convert.ToString(x));
+                }),
             };
 
             return ctx;
@@ -200,8 +244,9 @@ namespace nlang.net
             {
                 /* SPECIAL FORM: = */
 
-                Assign(((Token)cdr[0]).Text, Evaluate(cdr[1]));
-                return Statics.Undefined;
+                var ret = Evaluate(cdr[1]);
+                Assign(((Token)cdr[0]).Text, ret);
+                return ret;
             }
             else if (car.Cls == TokenClass.SYM && car.Text == "fn")
             {
@@ -229,6 +274,61 @@ namespace nlang.net
                     return ret;
                 });
                 return fn;
+            }
+            else if (car.Cls == TokenClass.SYM && car.Text == "++")
+            {
+                /* SPECIAL FORM: ++ */
+
+                var ret = Convert.ToDecimal(Evaluate(cdr[0])) + Convert.ToDecimal(1);
+                Assign(((Token)cdr[0]).Text, ret);
+                return ret;
+            }
+            else if (car.Cls == TokenClass.SYM && car.Text == "--")
+            {
+                /* SPECIAL FORM: -- */
+
+                var ret = Convert.ToDecimal(Evaluate(cdr[0])) - Convert.ToDecimal(1);
+                Assign(((Token)cdr[0]).Text, ret);
+                return ret;
+            }
+            else if (car.Cls == TokenClass.SYM && car.Text == "for")
+            {
+                /* SPECIAL FORM: for */
+
+                PushContext();
+
+                // variables
+                string varSym = null;
+                var i = 0;
+                ((Node)(((Node)cdr[0]).Children[0])).Children.ForEach((t =>
+                {
+                    var token = (Token)t;
+                    if (i % 2 == 0)
+                    {
+                        varSym = token.Text;
+                    }
+                    else
+                    {
+                        Intern(varSym);
+                        Assign(varSym, Evaluate(token));
+                    }
+                    i++;
+                }));
+
+                // loop
+                var ret = Statics.Undefined;
+                var cond = ((Node)(((Node)cdr[0]).Children[1]));
+                var body = (Node)((Node)cdr[1]);
+                var update = ((Node)(((Node)cdr[0]).Children[2]));
+                while ((bool)Evaluate(cond))
+                {
+                    ret = Evaluate(body);
+                    Evaluate(update);
+                }
+
+                PopContext();
+
+                return ret;
             }
             else
             {
